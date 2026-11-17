@@ -33,6 +33,18 @@ struct ListWorkspacesTest {
         assertEquals(result.stdout, ["a", "b", "setUpWorkspacesForTests"])
     }
 
+    @Test func testRunAll_persistentWorkspacesOrder() async {
+        config.persistentWorkspaces = ["c", "a", "10"]
+        Workspace.garbageCollectUnusedWorkspaces()
+        TestWindow.new(id: 1, parent: Workspace.get(byName: "z").rootTilingContainer)
+        TestWindow.new(id: 2, parent: Workspace.get(byName: "b").rootTilingContainer)
+        let result = await parseCommand("list-workspaces --all").cmdOrDie.run(.defaultEnv, .emptyStdin)
+        assertEquals(result.exitCode.rawValue, 0)
+        assertEquals(result.stderr, [])
+        // Persistent workspaces go first in config order, then the rest alphabetically
+        assertEquals(result.stdout, ["c", "a", "10", "b", "setUpWorkspacesForTests", "z"])
+    }
+
     @Test func testRunVisible() async {
         TestWindow.new(id: 1, parent: Workspace.get(byName: "a").rootTilingContainer)
         let result = await parseCommand("list-workspaces --monitor all --visible").cmdOrDie.run(.defaultEnv, .emptyStdin)

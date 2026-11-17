@@ -97,6 +97,32 @@ struct WorkspaceCommandTest {
         assertEquals(globalFocus.workspace.name, "b")
     }
 
+    @Test func testRelativeNextPrev_persistentWorkspacesOrder() async {
+        config.persistentWorkspaces = ["1", "2", "3", "Q", "W", "E"]
+        Workspace.garbageCollectUnusedWorkspaces()
+        // Non-persistent workspaces go after persistent ones. Non-empty to avoid garbage collection
+        TestWindow.new(id: 1, parent: Workspace.get(byName: "A").rootTilingContainer)
+        assertTrue(Workspace.get(byName: "3").focusWorkspace())
+
+        var result = await parseCommand("workspace next").cmdOrDie.run(.defaultEnv, .emptyStdin)
+        assertEquals(result.exitCode.rawValue, 0)
+        assertEquals(globalFocus.workspace.name, "Q") // Alphabetically, it'd be "A"
+
+        assertTrue(Workspace.get(byName: "E").focusWorkspace())
+        result = await parseCommand("workspace next").cmdOrDie.run(.defaultEnv, .emptyStdin)
+        assertEquals(result.exitCode.rawValue, 0)
+        assertEquals(globalFocus.workspace.name, "A")
+
+        result = await parseCommand("workspace prev").cmdOrDie.run(.defaultEnv, .emptyStdin)
+        assertEquals(result.exitCode.rawValue, 0)
+        assertEquals(globalFocus.workspace.name, "E")
+
+        assertTrue(Workspace.get(byName: "1").focusWorkspace())
+        result = await parseCommand("workspace --wrap-around prev").cmdOrDie.run(.defaultEnv, .emptyStdin)
+        assertEquals(result.exitCode.rawValue, 0)
+        assertEquals(globalFocus.workspace.name, "A")
+    }
+
     @Test func testRelativeNext_stdin() async {
         assertTrue(Workspace.get(byName: "a").focusWorkspace())
 

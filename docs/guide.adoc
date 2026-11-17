@@ -234,6 +234,8 @@ By specifying `config-version = 2`, you opt-in to the following behavior:
 
 * You unlock the possibility to specify `persistent-workspaces` config option in your config explicitly.
 * The fallback value of `persistent-workspaces` becomes an empty array
+* The order of `persistent-workspaces` defines the order of workspaces in the menu bar, `list-workspaces` output and `workspace (next|prev)`.
+Persistent workspaces go first, in the order they are listed. The rest of the workspaces go after them, in alphabetical order
 (In `config-version = 1`, the fallback value of `persistent-workspaces` was inferred from the right hand side of your keyboard bindings. It's proved to be error-prone)
 
 [#after-startup-command]

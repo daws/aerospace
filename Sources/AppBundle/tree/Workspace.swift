@@ -15,8 +15,9 @@ final class Workspace: TreeNode, NonLeafTreeNodeObject, Hashable, Comparable {
         check(forceAssignedMonitorInfo?.toMonitorOrRearrangeMonitors().getWorkspacesContainerOrCreate().bindWorkspace(self) != false)
     }
 
+    /// All workspaces, ordered by ``sortedByConfigOrder()``
     @MainActor static var all: [Workspace] {
-        workspaceNameToWorkspace.values.sorted()
+        workspaceNameToWorkspace.values.sortedByConfigOrder()
     }
 
     @MainActor static func get(byName name: String) -> Workspace {
@@ -82,4 +83,21 @@ final class Workspace: TreeNode, NonLeafTreeNodeObject, Hashable, Comparable {
     }
 
     nonisolated func hash(into hasher: inout Hasher) { hasher.combine(name) }
+}
+
+extension Sequence<Workspace> {
+    /// Persistent workspaces go first, in the order they are listed in the `persistent-workspaces` config option.
+    /// The rest of the workspaces go after them, in alphabetical order.
+    /// https://github.com/nikitabobko/AeroSpace/issues/1816
+    @MainActor func sortedByConfigOrder() -> [Workspace] {
+        let persistent = config.persistentWorkspaces
+        return sorted { lhs, rhs in
+            switch (persistent.firstIndex(of: lhs.name), persistent.firstIndex(of: rhs.name)) {
+                case (let l?, let r?): l < r
+                case (.some, nil): true
+                case (nil, .some): false
+                case (nil, nil): lhs < rhs
+            }
+        }
+    }
 }
