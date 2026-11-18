@@ -155,6 +155,9 @@ struct FocusCommand: Command {
             tilingParent = workspace.rootTilingContainer
         }
 
+        // The awaits above are suspension points. Concurrent sessions (e.g. another focus command, or the window was
+        // closed) might have already rebound the window. https://github.com/nikitabobko/AeroSpace/issues/1311
+        guard window.parent === workspace.floatingWindowsContainer else { continue }
         let data = window.unbindFromParent()
         let floatingWindowData = FloatingWindowData(
             window: window,
@@ -168,7 +171,11 @@ struct FocusCommand: Command {
     let floatingWindows: [FloatingWindowData] = _floatingWindows.sortedBy { $0.center.getProjection($0.tilingParent.orientation) }.reversed()
 
     for floating in floatingWindows { // Make floating windows be seen as tiling
-        floating.window.bind(to: floating.tilingParent, adaptiveWeight: 1, index: floating.index)
+        // tilingParent and index were computed before later suspension points, so they might be stale by now
+        let isParentStillValid = floating.tilingParent.nodeWorkspace === workspace
+        let parent = isParentStillValid ? floating.tilingParent : workspace.rootTilingContainer
+        let index = isParentStillValid ? min(floating.index, parent.children.count) : 0
+        floating.window.bind(to: parent, adaptiveWeight: 1, index: index)
     }
     return floatingWindows
 }
@@ -179,6 +186,7 @@ struct FocusCommand: Command {
         mruBefore?.markAsMostRecentChild()
     }
     for floating in floatingWindows {
+        guard floating.window.isBound else { continue } // The window was closed while the command was running
         floating.window.bind(to: workspace.floatingWindowsContainer, adaptiveWeight: floating.adaptiveWeight, index: INDEX_BIND_LAST)
     }
 }

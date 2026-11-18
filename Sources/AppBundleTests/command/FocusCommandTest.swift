@@ -123,6 +123,26 @@ struct FocusCommandTest {
         assertEquals(globalFocus.windowOrNil?.windowId, 3)
     }
 
+    // https://github.com/nikitabobko/AeroSpace/issues/1311
+    @Test func testConcurrentFocusOverFloatingWindows() async {
+        let workspace = Workspace.get(byName: name)
+        workspace.floatingWindowsContainer.apply {
+            TestWindow.new(id: 1, parent: $0, rect: Rect(topLeftX: 0, topLeftY: 0, width: 100, height: 100))
+            TestWindow.new(id: 2, parent: $0, rect: Rect(topLeftX: 10, topLeftY: 10, width: 100, height: 100))
+            TestWindow.new(id: 3, parent: $0, rect: Rect(topLeftX: 20, topLeftY: 20, width: 100, height: 100))
+        }
+        TestWindow.simulateAxSuspension = true
+
+        async let a = parseCommand("focus --window-id 1").cmdOrDie.run(.defaultEnv, .emptyStdin)
+        async let b = parseCommand("focus --window-id 3").cmdOrDie.run(.defaultEnv, .emptyStdin)
+        async let c = parseCommand("focus right").cmdOrDie.run(.defaultEnv, .emptyStdin)
+        _ = await (a, b, c)
+
+        // All windows are restored back as floating, none are lost or duplicated
+        assertEquals(workspace.floatingWindows.map(\.windowId.rawId).sorted(), [1, 2, 3])
+        assertEquals(workspace.rootTilingContainer.allLeafWindowsRecursive.count, 0)
+    }
+
     @Test func testFocusAlongTheContainerOrientation() async {
         Workspace.get(byName: name).rootTilingContainer.apply {
             assertEquals(TestWindow.new(id: 1, parent: $0).focusWindow(), true)
