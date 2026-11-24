@@ -45,6 +45,20 @@ struct ListWorkspacesTest {
         assertEquals(result.stdout, ["c", "a", "10", "b", "setUpWorkspacesForTests", "z"])
     }
 
+    @Test func testInitialWorkspace_persistentWorkspacesOrder() {
+        config.persistentWorkspaces = ["c", "a", "10"]
+        Workspace.garbageCollectUnusedWorkspaces()
+        focusInitialWorkspaces()
+        assertEquals(globalFocus.workspace.name, "c") // Alphabetically, it'd be "10"
+    }
+
+    @Test func testInitialWorkspace_noPersistentWorkspaces_alphabetical() {
+        _ = Workspace.get(byName: "b")
+        _ = Workspace.get(byName: "a")
+        focusInitialWorkspaces()
+        assertEquals(globalFocus.workspace.name, "a")
+    }
+
     @Test func testRunVisible() async {
         TestWindow.new(id: 1, parent: Workspace.get(byName: "a").rootTilingContainer)
         let result = await parseCommand("list-workspaces --monitor all --visible").cmdOrDie.run(.defaultEnv, .emptyStdin)

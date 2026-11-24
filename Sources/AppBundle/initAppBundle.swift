@@ -21,11 +21,7 @@ import Foundation
         startUnixSocketServer()
         GlobalObserver.initObserver()
         Workspace.garbageCollectUnusedWorkspaces() // init workspaces
-        for monitor in Monitor.all {
-            _ = monitor.getWorkspacesContainerOrCreate().children.filterIsInstance(of: Workspace.self)
-                .min()?
-                .focusWorkspace()
-        }
+        focusInitialWorkspaces()
         await runHeavyCompleteRefreshSession(
             .startup,
             // It's important for the first initialization to be non cancellable
@@ -37,6 +33,16 @@ import Foundation
             smartLayoutAtStartup()
             _ = await config.afterStartupCommand.run(.defaultEnv, .emptyStdin)
         }
+    }
+}
+
+/// On every monitor, focus the first workspace according to ``Sequence<Workspace>/sortedByConfigOrder()``
+@MainActor func focusInitialWorkspaces() {
+    for monitor in Monitor.all {
+        _ = monitor.getWorkspacesContainerOrCreate().children.filterIsInstance(of: Workspace.self)
+            .sortedByConfigOrder()
+            .first?
+            .focusWorkspace()
     }
 }
 
