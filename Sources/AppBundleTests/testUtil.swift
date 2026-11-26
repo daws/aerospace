@@ -55,6 +55,8 @@ func setUpWorkspacesForTests() {
     config.modes = [mainModeId: Mode(bindings: [:])]
     config.persistentWorkspaces = []
     TestWindow.simulateAxSuspension = false
+    monitorInfosForTests = nil
+    gcMonitors()
 
     for workspace in Workspace.all {
         for child in workspace.children {

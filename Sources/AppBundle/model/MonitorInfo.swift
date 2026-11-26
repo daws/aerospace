@@ -104,10 +104,18 @@ var mainMonitorInfo: MonitorInfo {
     return LazyMonitorInfo(monitorAppKitNsScreenScreensId: screen.index + 1, isMain: true, screen.value)
 }
 
+/// Tests can override monitors to simulate display configuration changes. Tests are serialized, hence unsafe is fine
+nonisolated(unsafe) var monitorInfosForTests: [MonitorInfo]? = nil
+
 var globalUnsortedMonitorInfos: [MonitorInfo] {
     isUnitTest
-        ? [testMonitorInfo]
+        ? monitorInfosForTests ?? [testMonitorInfo]
         : NSScreen.screens.enumerated().map { $0.element.toMonitorInfo(monitorAppKitNsScreenScreensId: $0.offset + 1) }
+}
+
+/// Make it possible to create monitors with arbitrary rects in tests
+func testMonitorInfo(name: String, rect: Rect, visibleRect: Rect? = nil) -> MonitorInfo {
+    MonitorInfoImpl(monitorAppKitNsScreenScreensId: 1, name: name, rect: rect, visibleRect: visibleRect ?? rect, isMain: rect.topLeftX == 0 && rect.topLeftY == 0)
 }
 
 var globalSortedMonitorInfos: [MonitorInfo] {

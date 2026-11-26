@@ -113,7 +113,21 @@ extension MonitorInfo {
 }
 
 @MainActor func gcMonitors() {
-    if pointToMonitor.count != globalUnsortedMonitorInfos.count {
+    let current = globalUnsortedMonitorInfos
+    // Monitor count and top-left corners might stay the same while the monitor itself changes. E.g. the built-in
+    // display is replaced by an external display in clamshell mode, or the display resolution changes.
+    // Otherwise, stale monitor rects break the layout and windows are "hidden" in a visible part of the screen.
+    let isStale = pointToMonitor.count != current.count || current.contains { info in
+        guard let cached = pointToMonitor[info.rect.topLeftCorner]?.info else { return true }
+        return cached.name != info.name || !cached.rect.isSameAs(info.rect) || !cached.visibleRect.isSameAs(info.visibleRect)
+    }
+    if isStale {
         rearrangeMonitors()
+    }
+}
+
+extension Rect {
+    fileprivate func isSameAs(_ other: Rect) -> Bool {
+        topLeftX == other.topLeftX && topLeftY == other.topLeftY && width == other.width && height == other.height
     }
 }
